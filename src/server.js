@@ -1,5 +1,6 @@
 /* eslint-disable max-len */
 import Hapi from "@hapi/hapi";
+import Jwt from '@hapi/jwt';
 
 // notes
 import notes from "./api/notes/index.js";
@@ -11,13 +12,21 @@ import users from "./api/users/index.js";
 import UsersService from "./services/postgres/UsersService.js";
 import UsersValidator from "./validator/users/index.js";
 
+// authentications
+import authentications from "./api/authentications/index.js";
+import AuthenticationsValidator from "./validator/authentications/index.js";
+import AuthenticationsService from "./services/postgres/AuthenticationsService.js";
+import TokenManager from "./tokenize/TokenManager.js";
+
 import * as dotenv from 'dotenv'; // see https://github.com/motdotla/dotenv#how-do-i-use-dotenv-with-import
 import ClientError from "./exceptions/ClientError.js";
+
 dotenv.config();
 
 const init = async () => {
   const notesService = new NotesService();
   const usersService = new UsersService();
+  const authenticationsService = new AuthenticationsService();
   const server = Hapi.server({
     port: process.env.PORT,
     host: process.env.HOST,
@@ -26,6 +35,30 @@ const init = async () => {
         origin: ["*"],
       },
     },
+  });
+
+  // Eksternal plugin
+
+  await server.register([
+    {
+      plugin: Jwt,
+    },
+  ]);
+
+  server.auth.strategy('notesapp_jwt', 'jwt', {
+    keys: process.env.ACCESS_TOKEN_KEY,
+    verify: {
+      aud: false,
+      iss: false,
+      sub: false,
+      maxAgeSec: process.env.ACCESS_TOKEN_AGE,
+    },
+    validate: (artifacts) =>({
+      isValid: true,
+      credentials: {
+        id: artifacts.decoded.payload.id,
+      },
+    }),
   });
 
   await server.register([
@@ -41,6 +74,15 @@ const init = async () => {
       options: {
         service: usersService,
         validator: UsersValidator,
+      },
+    },
+    {
+      plugin: authentications,
+      options: {
+        authenticationsService,
+        usersService,
+        tokenManager: TokenManager,
+        validator: AuthenticationsValidator,
       },
     },
   ]);
