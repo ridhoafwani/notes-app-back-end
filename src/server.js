@@ -23,6 +23,11 @@ import collaborations from "./api/collaborations/index.js";
 import CollaborationsService from "./services/postgres/CollaborationsService.js";
 import CollaborationsValidator from "./validator/collaborations/index.js";
 
+// export
+import _exports from "./api/exports/index.js";
+import ExportsValidator from "./validator/exports/index.js";
+import ProducerService from "./services/rabbitmq/ProdecerServices.js";
+
 import * as dotenv from 'dotenv'; // see https://github.com/motdotla/dotenv#how-do-i-use-dotenv-with-import
 import ClientError from "./exceptions/ClientError.js";
 
@@ -98,6 +103,13 @@ const init = async () => {
         collaborationsService,
         notesService,
         validator: CollaborationsValidator,
+      },
+    },
+    {
+      plugin: _exports,
+      options: {
+        service: ProducerService,
+        validator: ExportsValidator,
       },
     },
   ]);
