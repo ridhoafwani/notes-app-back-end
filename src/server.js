@@ -1,6 +1,8 @@
 /* eslint-disable max-len */
 import Hapi from "@hapi/hapi";
 import Jwt from '@hapi/jwt';
+import * as path from 'path';
+import Inert from '@hapi/inert';
 
 // notes
 import notes from "./api/notes/index.js";
@@ -30,14 +32,21 @@ import ProducerService from "./services/rabbitmq/ProdecerServices.js";
 
 import * as dotenv from 'dotenv'; // see https://github.com/motdotla/dotenv#how-do-i-use-dotenv-with-import
 import ClientError from "./exceptions/ClientError.js";
+import uploads from "./api/uploads/index.js";
+import UploadsValidator from "./validator/uploads/index.js";
+import StorageService from "./services/storage/StorageService.js";
 
 
 dotenv.config();
+// const __dirname = path.resolve(path.dirname(''));
+import * as url from 'url';
+const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
 
 const init = async () => {
   const collaborationsService = new CollaborationsService();
   const notesService = new NotesService(collaborationsService);
   const usersService = new UsersService();
+  const storageService = new StorageService(path.resolve(__dirname, 'api/uploads/file/images'));
   const authenticationsService = new AuthenticationsService();
   const server = Hapi.server({
     port: process.env.PORT,
@@ -54,6 +63,9 @@ const init = async () => {
   await server.register([
     {
       plugin: Jwt,
+    },
+    {
+      plugin: Inert,
     },
   ]);
 
@@ -110,6 +122,13 @@ const init = async () => {
       options: {
         service: ProducerService,
         validator: ExportsValidator,
+      },
+    },
+    {
+      plugin: uploads,
+      options: {
+        service: storageService,
+        validator: UploadsValidator,
       },
     },
   ]);
