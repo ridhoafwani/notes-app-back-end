@@ -37,13 +37,15 @@ import StorageService from "./services/S3/StorageService.js";
 
 // Error Handler
 import ClientError from "./exceptions/ClientError.js";
+import CacheService from "./services/redis/CacheService.js";
 
 
 dotenv.config();
 
 const init = async () => {
-  const collaborationsService = new CollaborationsService();
-  const notesService = new NotesService(collaborationsService);
+  const cacheService = new CacheService();
+  const collaborationsService = new CollaborationsService(cacheService);
+  const notesService = new NotesService(collaborationsService, cacheService);
   const usersService = new UsersService();
   const storageService = new StorageService();
   const authenticationsService = new AuthenticationsService();
